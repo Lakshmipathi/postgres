@@ -45,7 +45,7 @@ The secure erase will complete successfully when you see:${NC}
     dd: writing to '/zerofile': No space left on device\n
 Beginning secure erase now\n"
 
-dd if=/dev/zero of=/zerofile &
+dd if=/dev/zero of=/zerofile bs=100M &
   PID=$!
   while [ -d /proc/$PID ]
     do

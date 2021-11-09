@@ -25,6 +25,7 @@
       systemd:
         name: postgresql
         state: started
+      when: not ebssurrogate_mode
 
     - name: Install WAL-G
       import_tasks: tasks/setup-wal-g.yml
@@ -44,9 +45,6 @@
       tags:
         - install-supabase-internal
 
-    - name: Clean out build dependencies
-      import_tasks: tasks/clean-build-dependencies.yml
-
     - name: Adjust APT update intervals
       copy:
         src: files/apt_periodic
@@ -64,6 +62,7 @@
       shell:
         cmd: /usr/lib/postgresql/bin/psql -f /tmp/{{ item.dest }}
       loop: "{{ sql_files }}"
+      when: not ebssurrogate_mode
 
     - name: Delete SQL scripts
       file:
@@ -136,3 +135,6 @@
           - unattended-upgrades
         update_cache: yes
         cache_valid_time: 3600
+
+    - name: Clean out build dependencies
+      import_tasks: tasks/clean-build-dependencies.yml

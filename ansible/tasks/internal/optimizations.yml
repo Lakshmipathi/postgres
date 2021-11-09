@@ -2,6 +2,7 @@
   community.general.snap:
     name: amazon-ssm-agent
     state: absent
+  failed_when: not ebssurrogate_mode
 
 - name: ensure services are stopped and disabled for first boot
   systemd:
@@ -14,12 +15,14 @@
     - pgbouncer
     - fail2ban
     - motd-news
+  failed_when: not ebssurrogate_mode
 
 - name: Remove snapd
   apt:
     state: absent
     pkg:
       - snapd
+  failed_when: not ebssurrogate_mode
 
 - name: ensure services are stopped and disabled for first boot
   systemd:
@@ -29,6 +32,7 @@
     masked: yes
   with_items:
     - lvm2-monitor
+  failed_when: not ebssurrogate_mode
 
 - name: disable man-db
   become: yes
@@ -39,3 +43,4 @@
     - man-db
     - popularity-contest
     - ubuntu-advantage-tools
+  failed_when: not ebssurrogate_mode
