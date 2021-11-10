@@ -23,7 +23,7 @@ function update_install_packages {
 	# Install various packages needed for a booting system
 	apt-get install -y \
 		linux-aws \
-		grub-pc \
+		grub2 \
 		e2fsprogs
 
 	# Install standard packages
@@ -76,11 +76,6 @@ function install_packages_for_build {
 }
 
 function install_configure_grub {
-	# Install GRUB
-	grub-probe /
-	grub-install /dev/xvdf
-
-	# Configure and update GRUB
 	mkdir -p /etc/default/grub.d
 
 cat << EOF > /etc/default/grub.d/50-aws-settings.cfg
@@ -90,10 +85,8 @@ GRUB_CMDLINE_LINUX_DEFAULT=" root=/dev/nvme0n1p2 rootfstype=ext4 rw noatime,nodi
 GRUB_TERMINAL=console
 GRUB_DISABLE_LINUX_UUID=true
 EOF
-	# remove initd
-	rm -f /boot/microcode.cpio
-	rm -rf /boot/initrd.*
-	update-grub
+        grub-mkconfig -o /boot/grub/grub.cfg
+	grub-install --target=i386-pc --directory=/usr/lib/grub/i386-pc --recheck --boot-directory=/boot /dev/xvdf
 
 	# skip fsck for first boot
 	touch /fastboot

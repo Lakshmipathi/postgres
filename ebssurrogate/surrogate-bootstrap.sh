@@ -57,7 +57,13 @@ function device_partition_mappings {
 	done
 
 	# Partition the new root EBS volume
-	sgdisk -Zg -n1:0:4095 -t1:EF02 -c1:GRUB -n2:0:0 -t2:8300 -c2:EXT4 /dev/xvdf
+	parted --script /dev/xvdf \
+		 mklabel gpt \
+                 mkpart bbp 1MiB 2iMB \
+                 set 1 bios_grub on \
+                 mkpart primary 2MiB 100%
+	parted --script /dev/xvdf print
+	sleep 1
 
 	# NVMe EBS launch device partition mappings (symlinks): /dev/nvme*n*p* to /dev/xvd*[0-9]+
 	declare -A partdev_mappings
@@ -79,6 +85,7 @@ function device_partition_mappings {
 
 function format_and_mount_rootfs {
 	# Format the drive
+	mkfs.ext4 /dev/xvdf1
 	mkfs.ext4 -O fast_commit /dev/xvdf2
 	mount -o noatime,nodiratime /dev/xvdf2 /mnt
 }
