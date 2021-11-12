@@ -31,7 +31,7 @@
 - name: install wal-g
   become: yes
   shell:
-    cmd: make install && make deps && make pg_install
+    cmd: git reset --hard 4e39595c013463e5ed00b3c5c615b677fbca31d8 && make install && make deps && make pg_install
     chdir: "{{ ansible_env.HOME }}/go/src/github.com/wal-g/wal-g"
   environment:
     GOBIN: "/usr/local/bin"

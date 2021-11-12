@@ -81,6 +81,8 @@ function format_and_mount_rootfs {
 	# Format the drive
 	mkfs.ext4 -O fast_commit /dev/xvdf2
 	mount -o noatime,nodiratime /dev/xvdf2 /mnt
+	mkfs.ext4 -O ^has_journal /dev/xvdc
+
 }
 
 function setup_chroot_environment {
@@ -93,6 +95,11 @@ function setup_chroot_environment {
 	mount --rbind /dev /mnt/dev
 	mount --rbind /proc /mnt/proc
 	mount --rbind /sys /mnt/sys
+
+        # Create build mount point and mount 
+	mkdir -p /mnt/tmp
+	mount /dev/xvdc /mnt/tmp
+	chmod 777 /mnt/tmp
 
 	# Copy the bootstrap script into place and execute inside chroot
 	cp /tmp/chroot-bootstrap.sh /mnt/tmp/chroot-bootstrap.sh
@@ -118,7 +125,7 @@ function setup_chroot_environment {
 
 function execute_playbook {
 	# Run Ansible playbook
-	export ANSIBLE_LOG_PATH=/tmp/ansible.log && export ANSIBLE_DEBUG=True
+	export ANSIBLE_LOG_PATH=/tmp/ansible.log && export ANSIBLE_DEBUG=True && export ANSIBLE_REMOTE_TEMP=/mnt/tmp 
 	ansible-playbook -v -c chroot -i '/mnt,' /tmp/ansible-playbook/ansible/playbook.yml --extra-vars " $ARGS"
 }
 
@@ -150,6 +157,13 @@ function clean_system {
 	# Setup postgresql logs
 	mkdir -p /mnt/var/log/postgresql
 	chroot /mnt /usr/bin/chown postgres:postgres /var/log/postgresql
+
+	# unwanted files
+	rm -rf /mnt/var/lib/apt/lists/*
+	rm -rf /mnt/root/.cache
+	rm -rf /mnt/root/.vpython*
+	rm -rf /mnt/root/go
+
 }
 
 # Unmount bind mounts
@@ -157,6 +171,8 @@ function umount_reset_mappings {
 	umount -l /mnt/dev
 	umount -l /mnt/proc
 	umount -l /mnt/sys
+	umount -l /mnt/tmp
+
 	umount /mnt
 
 	# Reset device mappings

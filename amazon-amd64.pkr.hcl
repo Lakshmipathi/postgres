@@ -38,11 +38,16 @@ variable "region" {
   default = "us-west-2"
 }
 
+variable "build-vol" {
+  type    = string
+  default = "xvdc"
+}
+
 # source block
 source "amazon-ebssurrogate" "source" {
   access_key    = "${var.aws_access_key}"
   ami_name = "${var.ami_name}-amd64-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
-  ami_description = "Supabase AMI (amd64-ext4)"
+  ami_description = "Supabase AMI (amd64-ext4-10GB)"
   ami_virtualization_type = "hvm"
   ami_regions   = "${var.ami_regions}"
 #  instance_type = "m5.2xlarge"
@@ -64,20 +69,28 @@ source "amazon-ebssurrogate" "source" {
   launch_block_device_mappings {
     device_name = "/dev/xvdf"
     delete_on_termination = true
-    volume_size = 16
+    volume_size = 10
     volume_type = "gp2"
    }
 
+  launch_block_device_mappings {
+    device_name           = "/dev/${var.build-vol}"
+    delete_on_termination = true
+    volume_size           = 16
+    volume_type           = "gp2"
+    omit_from_artifact    = true
+  }
+
   run_tags = {
-    Name = "Supabase AMI Builder(amd64-ext4)"
+    Name = "Supabase AMI Builder(amd64-ext4-10G)"
   }
   run_volume_tags = {
-    Name = "Supabase AMI Builder(amd64-ext4)"
+    Name = "Supabase AMI Builder(amd64-ext4-10G)"
   }
   tags = {
     appType     = "postgres"
     environment = "${var.environment}"
-    Name = "Supabase AMI (amd64-ext4)"
+    Name = "Supabase AMI (amd64-ext4-10G)"
   }
 
   communicator = "ssh"
@@ -89,7 +102,7 @@ source "amazon-ebssurrogate" "source" {
     source_device_name = "/dev/xvdf"
     device_name = "/dev/xvda"
     delete_on_termination = true
-    volume_size = 16
+    volume_size = 10
     volume_type = "gp2"
   }
 }
