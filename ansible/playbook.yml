@@ -12,14 +12,21 @@
       - { source: "stat_extension.sql", dest: "01-extension.sql" }
 
   environment:
-    PATH: /usr/lib/postgresql/bin:{{ ansible_env.PATH }}
+    PATH: /usr/lib/ccache:/usr/lib/postgresql/bin:{{ ansible_env.PATH }}
+    CCACHE_DIR: /tmp/ccache
 
   tasks:
     - name: Install Postgres from source
       import_tasks: tasks/setup-postgres.yml
 
+    - name: Install Postgres from source [ccache stats]
+      ansible.builtin.command: /usr/bin/ccache -s
+
     - name: Install Postgres extensions
       import_tasks: tasks/setup-extensions.yml
+
+    - name: Install Postgres extensions [ccache stats]
+      ansible.builtin.command: /usr/bin/ccache -s
 
     - name: Start Postgres Database
       systemd:
@@ -39,6 +46,7 @@
       import_tasks: tasks/setup-postgrest.yml
       tags:
         - install-postgrest
+
         
     - name: Install Supabase specific content
       import_tasks: tasks/setup-supabase-internal.yml
@@ -117,6 +125,9 @@
     - name: Enhance fail2ban
       import_tasks: tasks/setup-fail2ban.yml
 
+    - name: Final ccache stats [ccache stats]
+      ansible.builtin.command: /usr/bin/ccache -s
+
     # Install EC2 instance connect
     # Only for AWS images
     - name: install EC2 instance connect
@@ -138,3 +149,4 @@
 
     - name: Clean out build dependencies
       import_tasks: tasks/clean-build-dependencies.yml
+

@@ -32,12 +32,9 @@ function install_packages {
 		gdisk \
 		e2fsprogs \
 		debootstrap \
-		nvme-cli
+		nvme-cli \
+		docker.io 
 
-	#Download and install latest e2fsprogs for fast_commit feature
-	apt-get install gcc make bison -y
-	wget https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git/snapshot/e2fsprogs-1.46.4.tar.gz
-	tar -xvf e2fsprogs-1.46.4.tar.gz && cd e2fsprogs-1.46.4 && ./configure && make -j2 && make install
 }
 
 function device_partition_mappings {
@@ -78,16 +75,34 @@ function device_partition_mappings {
 
 
 function format_and_mount_rootfs {
-	# Format the drive
-	mkfs.ext4 -O fast_commit /dev/xvdf2
+	#Download and install latest e2fsprogs for fast_commit feature
+	if [ "${USE_FAST_COMMIT}" = "yes" ]; then
+		apt-get install gcc make bison -y
+		wget https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git/snapshot/e2fsprogs-1.46.4.tar.gz
+		tar -xvf e2fsprogs-1.46.4.tar.gz && cd e2fsprogs-1.46.4 && ./configure && make -j2 && make install
+		# Format the drive as 
+		mkfs.ext4 -O fast_commit /dev/xvdf2
+	else
+		mkfs.ext4 /dev/xvdf2
+	fi
 	mount -o noatime,nodiratime /dev/xvdf2 /mnt
 	mkfs.ext4 -O ^has_journal /dev/xvdc
 
 }
 
+function pull_docker {
+	docker run -itd --name ccachedata "${DOCKER_IMAGE}:${DOCKER_IMAGE_TAG}" sh
+	docker exec -itd ccachedata mkdir -p /build/ccache
+}
+
+
 function setup_chroot_environment {
 	# Bootstrap Ubuntu into /mnt
 	debootstrap --arch amd64 --variant=minbase focal /mnt
+
+	# Update ec2-region
+	REGION=$(curl --silent http://169.254.169.254/latest/meta-data/placement/availability-zone | sed -E 's|[a-z]+$||g')
+	sed -i "s/REGION/${REGION}/g" /tmp/sources.list
 	cp /tmp/sources.list /mnt/etc/apt/sources.list
 
 	# Create mount points and mount the filesystem
@@ -123,10 +138,15 @@ function setup_chroot_environment {
 	sleep 10
 }
 
+function download_ccache {
+	docker cp ccachedata:/build/ccache/. /mnt/tmp/ccache
+}
+
 function execute_playbook {
 	# Run Ansible playbook
-	export ANSIBLE_LOG_PATH=/tmp/ansible.log && export ANSIBLE_DEBUG=True && export ANSIBLE_REMOTE_TEMP=/mnt/tmp 
-	ansible-playbook -v -c chroot -i '/mnt,' /tmp/ansible-playbook/ansible/playbook.yml --extra-vars " $ARGS"
+	#export ANSIBLE_LOG_PATH=/tmp/ansible.log && export ANSIBLE_DEBUG=True && export ANSIBLE_REMOTE_TEMP=/mnt/tmp 
+	export ANSIBLE_LOG_PATH=/tmp/ansible.log && export ANSIBLE_REMOTE_TEMP=/mnt/tmp 
+	ansible-playbook -c chroot -i '/mnt,' /tmp/ansible-playbook/ansible/playbook.yml --extra-vars " $ARGS"
 }
 
 function update_systemd_services {
@@ -166,6 +186,14 @@ function clean_system {
 
 }
 
+function upload_ccache {
+	docker cp /mnt/tmp/ccache/. ccachedata:/build/ccache
+	docker stop ccachedata
+	docker commit ccachedata "${DOCKER_IMAGE}:${DOCKER_IMAGE_TAG}"
+	echo ${DOCKER_PASSWD} | docker login --username ${DOCKER_USER} --password-stdin 
+	docker push  "${DOCKER_IMAGE}:${DOCKER_IMAGE_TAG}"
+}
+
 # Unmount bind mounts
 function umount_reset_mappings {
 	umount -l /mnt/dev
@@ -187,8 +215,11 @@ waitfor_boot_finished
 install_packages
 device_partition_mappings
 format_and_mount_rootfs
+pull_docker
 setup_chroot_environment
+download_ccache
 execute_playbook
 update_systemd_services
+upload_ccache
 clean_system
 umount_reset_mappings

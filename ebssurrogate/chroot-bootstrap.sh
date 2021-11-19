@@ -62,17 +62,17 @@ EOF
 }
 
 function install_packages_for_build {
-	apt-get install -y --no-install-recommends linux-libc-dev
-	apt-get install -y --no-install-recommends acl
-	apt-get install -y --no-install-recommends magic-wormhole sysstat
-	apt-get install -y --no-install-recommends build-essential libreadline-dev zlib1g-dev flex bison libxml2-dev libxslt-dev libssl-dev libsystemd-dev libpq-dev libxml2-utils uuid-dev xsltproc ssl-cert
-	apt-get install -y --no-install-recommends llvm-11-dev clang-11
-	apt-get install -y --no-install-recommends gcc-10 g++-10
-	apt-get install -y --no-install-recommends libgeos-dev libproj-dev libgdal-dev libjson-c-dev libboost-all-dev libcgal-dev libmpfr-dev libgmp-dev cmake
-	apt-get install -y --no-install-recommends libkrb5-dev
-	apt-get install -y --no-install-recommends maven default-jre default-jdk
-	apt-get install -y --no-install-recommends curl gpp apt-transport-https cmake libc++-dev libc++abi-dev libc++1 libglib2.0-dev libtinfo5 libc++abi1 ninja-build python
-	apt-get install -y --no-install-recommends liblzo2-dev
+	apt-get install -y --no-install-recommends linux-libc-dev \
+	 acl \
+	 magic-wormhole sysstat \
+	 build-essential libreadline-dev zlib1g-dev flex bison libxml2-dev libxslt-dev libssl-dev libsystemd-dev libpq-dev libxml2-utils uuid-dev xsltproc ssl-cert \
+	 llvm-11-dev clang-11 \
+	 gcc-10 g++-10 \
+	 libgeos-dev libproj-dev libgdal-dev libjson-c-dev libboost-all-dev libcgal-dev libmpfr-dev libgmp-dev cmake \
+	 libkrb5-dev \
+	 maven default-jre default-jdk \
+	 curl gpp apt-transport-https cmake libc++-dev libc++abi-dev libc++1 libglib2.0-dev libtinfo5 libc++abi1 ninja-build python \
+	 liblzo2-dev
 }
 
 function install_configure_grub {
@@ -126,6 +126,14 @@ function set_default_target {
 	ln -s /lib/systemd/system/multi-user.target /etc/systemd/system/default.target
 }
 
+# Setup ccache
+function setup_ccache {
+	apt-get install ccache -y
+	mkdir -p /tmp/ccache
+	export PATH=/usr/lib/ccache:$PATH
+	echo "PATH=$PATH" >> /etc/environment
+}
+
 # Clear apt caches
 function cleanup_cache {
 	apt-get clean
@@ -137,4 +145,5 @@ install_configure_grub
 setup_hostname
 create_admin_account
 set_default_target
+setup_ccache
 cleanup_cache

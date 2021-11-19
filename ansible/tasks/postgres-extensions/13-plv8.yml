@@ -36,9 +36,15 @@
     state: link
   when: platform == "arm64"
 
+- name: plv8 - Set git clone depth
+  shell: sed -i 's/clone/clone --depth 1/g' /tmp/plv8/Makefile
+  become: yes
+
 - name: plv8 - build
   make:
     chdir: /tmp/plv8
+    params:
+      NUM_THREADS: 8
   become: yes
 
 - name: plv8 - install

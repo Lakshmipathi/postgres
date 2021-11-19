@@ -38,10 +38,38 @@ variable "region" {
   default = "us-west-2"
 }
 
-variable "build-vol" {
+variable "build_vol" {
   type    = string
   default = "xvdc"
 }
+
+# ccache docker image details
+variable "docker_user" {
+  type    = string
+  default = ""
+}
+
+variable "docker_passwd" {
+  type    = string
+  default = ""
+}
+
+variable "docker_image" {
+  type    = string
+  default = "laks/ccache"
+}
+
+variable "docker_image_tag" {
+  type    = string
+  default = "latest"
+}
+
+
+variable "use_fast_commit" {
+  type    = string
+  default = "no"
+}
+
 
 # source block
 source "amazon-ebssurrogate" "source" {
@@ -50,8 +78,9 @@ source "amazon-ebssurrogate" "source" {
   ami_description = "Supabase AMI (amd64-ext4-10GB)"
   ami_virtualization_type = "hvm"
   ami_regions   = "${var.ami_regions}"
-#  instance_type = "m5.2xlarge"
-  instance_type = "m4.large"
+  spot_instance_types = [ "m5.2xlarge","m4.2xlarge" ]
+  #https://www.packer.io/docs/builders/amazon/ebssurrogate#spot_price
+  spot_price = "auto"
   region       = "${var.region}"
   secret_key   = "${var.aws_secret_key}"
 
@@ -74,7 +103,7 @@ source "amazon-ebssurrogate" "source" {
    }
 
   launch_block_device_mappings {
-    device_name           = "/dev/${var.build-vol}"
+    device_name           = "/dev/${var.build_vol}"
     delete_on_termination = true
     volume_size           = 16
     volume_type           = "gp2"
@@ -112,7 +141,7 @@ build {
   sources = ["source.amazon-ebssurrogate.source"]
 
   provisioner "file" {
-    source = "ebssurrogate/files/sources-us-west-2.list"
+    source = "ebssurrogate/files/sources.cfg"
     destination = "/tmp/sources.list"
   }
 
@@ -163,11 +192,22 @@ build {
 
   provisioner "shell" {
     environment_vars = [
-      "ARGS=${var.ansible_arguments}"
+      "ARGS=${var.ansible_arguments}",
+      "DOCKER_USER=${var.docker_user}",
+      "DOCKER_PASSWD=${var.docker_passwd}",
+      "DOCKER_IMAGE=${var.docker_image}",
+      "DOCKER_IMAGE_TAG=${var.docker_image_tag}",
+      "USE_FAST_COMMIT=${var.use_fast_commit}"
     ]
     script = "ebssurrogate/surrogate-bootstrap.sh"
     execute_command = "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     start_retry_timeout = "5m"
     skip_clean = true
+  }
+
+  provisioner "file" {
+    source = "/tmp/ansible.log"
+    destination = "/tmp/ansible.log"
+    direction = "download"
   }
 }

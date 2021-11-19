@@ -42,4 +42,4 @@
   become: yes
   file:
     path: /usr/local/go
-    state: absent  
+    state: absent
