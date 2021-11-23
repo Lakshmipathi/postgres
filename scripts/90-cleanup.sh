@@ -18,6 +18,30 @@ if [ -n "$(command -v yum)" ]; then
   yum update -y
   yum clean all
 elif [ -n "$(command -v apt-get)" ]; then
+  # Cleanup more packages
+  apt-get -y remove --purge \
+	libgl1-mesa-dri \
+	automake \
+ 	autoconf \
+	autotools-dev \
+ 	cmake-data \
+	cpp-8  \
+	cpp-9  \
+	cpp-10  \
+	gcc-8  \
+	gcc-9  \
+	gcc-10  \
+	git  \
+	git-man  \
+	ansible \
+	libasound2 \
+	llvm-11-dev \
+	libicu-dev \
+	libcgal-dev \
+	libc6-dev  \
+	libgcc-9-dev \
+	libgcc-8-dev \
+	linux-headers-5.11.0-1021-aws
   apt-get -y update
   apt-get -y upgrade
   apt-get -y autoremove
@@ -45,7 +69,8 @@ The secure erase will complete successfully when you see:${NC}
     dd: writing to '/zerofile': No space left on device\n
 Beginning secure erase now\n"
 
-dd if=/dev/zero of=/zerofile &
+if [ ${USE_ZFS} = "no" ]; then
+dd if=/dev/zero of=/zerofile bs=100M &
   PID=$!
   while [ -d /proc/$PID ]
     do
@@ -54,3 +79,4 @@ dd if=/dev/zero of=/zerofile &
     done
 sync; rm /zerofile; sync
 cat /dev/null > /var/log/lastlog; cat /dev/null > /var/log/wtmp
+fi
