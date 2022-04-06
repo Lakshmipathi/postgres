@@ -3,7 +3,7 @@ name: Run CI checks
 on:
   push:
     branches:
-      - develop
+      - wip/fastboot
 
 jobs:
   build:
@@ -14,6 +14,6 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v2
 
-      - name: Build AMI
+      - name: Build Postgres-arm64 AMI
         run: |
-          packer build -timestamp-ui -color=false -on-error=cleanup -var-file common.vars.json -var-file development-arm.vars.json amazon.json
+          packer validate -var-file common.vars.json -var-file development-arm.vars.json -var "aws_access_key=$AWS_ACCESS_KEY_ID" -var "aws_secret_key=$AWS_SECRET_ACCESS_KEY" -var "docker_passwd=$DOCKER_PASSWD" -var "docker_user=$DOCKER_USER" -var "docker_image=$DOCKER_IMAGE"  amazon-arm64.pkr.hcl
